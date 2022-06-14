@@ -1,0 +1,48 @@
+---
+name: Linting
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  markdown-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - name: Run markdown lint
+        run: |
+          npm install -g markdownlint-cli
+          markdownlint "_pages/**/*.md" "_tabs/**/*.md"
+  yaml-lint:
+    needs: markdown-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Install Yamllint
+        run: sudo apt install yamllint
+      - name: Run yaml lint
+        run: yamllint .
+  continuous-delivery:
+    needs: yaml-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # for posts's lastmod
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
+          bundler-cache: true
+
+      - name: Deploy
+        run: bash tools/deploy.sh
